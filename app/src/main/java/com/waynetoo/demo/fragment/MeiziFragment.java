@@ -120,7 +120,7 @@ public class MeiziFragment extends BaseFragment {
 
             @Override
             public void onItemClick(View cardImageView, int index) {
-//                toast("点击了 position=" + index);
+              //  toast("点击了 position=" + index);
             }
         });
         return container;

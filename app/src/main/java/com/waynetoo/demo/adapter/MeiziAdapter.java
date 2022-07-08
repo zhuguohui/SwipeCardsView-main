@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.cardview.widget.CardView;
 
@@ -45,11 +46,12 @@ public class MeiziAdapter extends BaseCardAdapter<View> {
             return;
         }
         ImageView imageView = cardView.findViewById(R.id.iv_meizi);
-        View view = cardView.findViewById(R.id.click);
+        View view = cardView.findViewById(R.id.tv_view_detail);
         TextView textView = cardView.findViewById(R.id.text);
 
         view.setOnClickListener(it -> {
-            System.out.println("position ：" + position);
+            int index=position+1;
+            Toast.makeText(cardView.getContext(),"查看第"+index+"条数据",Toast.LENGTH_SHORT).show();
         });
         ContentBean meizi = datas.get(position);
         textView.setText("--" + meizi.getOrder() + "--");

@@ -93,15 +93,6 @@ public class SwipeCardsView extends LinearLayout {
         scaleOffsetStep = a.getFloat(R.styleable.SwipCardsView_scaleOffsetStep, scaleOffsetStep);
 
         a.recycle();
-
-        btnListener = new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (null != mCardsSlideListener && view.getScaleX() == 1f) {
-                    mCardsSlideListener.onItemClick(view, mShowingIndex);
-                }
-            }
-        };
         mScroller = new Scroller(getContext(), new LinearInterpolator());
         mTouchSlop = ViewConfiguration.get(getContext()).getScaledTouchSlop();
         mMaxVelocity = ViewConfiguration.get(getContext()).getScaledMaximumFlingVelocity();
@@ -190,7 +181,7 @@ public class SwipeCardsView extends LinearLayout {
             } else {
                 childView.setVisibility(View.GONE);
             }
-            setOnItemClickListener(childView);
+
         }
         if (null != mCardsSlideListener) {
             mCardsSlideListener.onShow(mShowingIndex);
@@ -198,9 +189,7 @@ public class SwipeCardsView extends LinearLayout {
         syncCardElevation();
     }
 
-    private void setOnItemClickListener(View childView) {
-        childView.setOnClickListener(btnListener);
-    }
+
 
     public void setAdapter(BaseCardAdapter adapter) {
         if (adapter == null) {
@@ -224,7 +213,7 @@ public class SwipeCardsView extends LinearLayout {
                 childView.setVisibility(View.GONE);
             }
             viewList.add(childView);
-            setOnItemClickListener(childView);
+
             addView(childView, 0);
         }
         if (null != mCardsSlideListener) {
@@ -314,15 +303,20 @@ public class SwipeCardsView extends LinearLayout {
 
                 }
 
-                if (isIntercepted && (hasTouchTopView || isTouchTopView(ev))) {
+                if (isIntercepted) {
                     hasTouchTopView = true;
                     showNextItem = true;
                     if (!lastMoveDirection.isHorizontal()) {
                         if (dealMoveYEvent(currentY)) {
                             return super.dispatchTouchEvent(ev);
                         }
+                    }else {
+                        if(dealMoveXEvent(currentX)){
+                            return super.dispatchTouchEvent(ev);
+                        }
                     }
                     if (lastMoveDirection.isHorizontal()) {
+                        //目的是为了把移动的方向限制在一条直线
                         //横向的，就丢掉Y方向的信息
                         deltaY = 0;
                     } else {
@@ -353,7 +347,8 @@ public class SwipeCardsView extends LinearLayout {
 
                 break;
         }
-        return super.dispatchTouchEvent(ev);
+        super.dispatchTouchEvent(ev);
+        return true;
     }
 
     private MoveDirection getMoveDirection(int dx, int dy) {
@@ -370,6 +365,19 @@ public class SwipeCardsView extends LinearLayout {
                 return MoveDirection.UP;
             }
         }
+    }
+
+    private boolean dealMoveXEvent(int currentX){
+        //如果是最后一个控件，不允许移动了
+        View topView = getTopView();
+        if (!canMoveCard() ) {
+            if(topView.getLeft()!=initLeft) {
+                topView.offsetLeftAndRight(initLeft - topView.getLeft());
+                topView.setAlpha(1f);
+            }
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -845,10 +853,21 @@ public class SwipeCardsView extends LinearLayout {
         SlideType flyType = SlideType.NONE;
         int distance = lastMoveDirection.isHorizontal() ? changedView.getLeft() - initLeft : changedView.getTop() - initTop;
         float vel = lastMoveDirection.isHorizontal() ? xvel : yvel;
-        boolean distanceIsMatch = Math.abs(distance) > Y_DISTANCE_THRESHOLD;//距离是否满足要求
-        boolean velIsMatch = Math.abs(vel) > Y_DISTANCE_THRESHOLD; //速度是否满足要求。
+        distance= Math.abs(distance);
+        vel=Math.abs(vel);
+        boolean distanceIsMatch =distance > Y_DISTANCE_THRESHOLD;//距离是否满足要求
+        boolean velIsMatch =vel > Y_DISTANCE_THRESHOLD; //速度是否满足要求。
         boolean isMatch = distanceIsMatch || velIsMatch;//只要瞒住其一就行了
-        if (!isMatch) {
+        //准备移除最后一个。不支持该操作
+
+        if (!isMatch||!canMoveCard()) {
+            //如果不满足滑动，将其处理成点击事件
+            if(distance<mTouchSlop) {
+               // Log.i("zzz", "distance=" + distance + " 点击item " + mShowingIndex);
+                callOnItemClick();
+            }
+            //重置topView
+            startScrollTopView(initLeft,initTop,SCROLL_DURATION,SlideType.NONE,false);
             return;
         }
         boolean addReleaseList = false;//结束后是否需要移到后面
@@ -873,6 +892,12 @@ public class SwipeCardsView extends LinearLayout {
         }
 
         startScrollTopView(finalX, finalY, SCROLL_DURATION, flyType, addReleaseList);
+    }
+
+    private void callOnItemClick() {
+        if(mCardsSlideListener!=null){
+            mCardsSlideListener.onItemClick(getTopView(),mShowingIndex);
+        }
     }
 
 
